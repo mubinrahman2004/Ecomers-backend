@@ -1,7 +1,16 @@
 const userSchema = require("../models/userSchema");
 const { sendEmail } = require("../services/emailServices");
-const { emailVerifyTemplate } = require("../services/emailTemplate");
-const { generateOTP } = require("../services/helpers");
+const {
+  emailVerifyTemplate,
+  resetPassEmailTem,
+} = require("../services/emailTemplate");
+const {
+  generateOTP,
+  generatAccessToken,
+  generatRefreshToken,
+  generatResetPassToken,
+} = require("../services/helpers");
+const { responseHandler } = require("../services/responseHandler");
 const isValidEmail = require("../services/validation");
 
 const signupUser = async (req, res) => {
@@ -38,12 +47,14 @@ const signupUser = async (req, res) => {
     });
 
     user.save();
-
-    res.status(201).send({
-      message: "Registration successfull,please verified your email ",
-    });
+    return responseHandler(
+      res,
+      200,
+      "Registration successfull,please verified your email",
+      true
+    );
   } catch (error) {
-    res.status(500).send({ message: "server error" });
+    return responseHandler(res, 500, "Internal server error");
   }
 };
 
@@ -71,7 +82,7 @@ const verifyOtp = async (req, res) => {
 
     res.status(200).send({ Message: "verifie successfull" });
   } catch (error) {
-    res.status(500).send({ message: "server error" });
+    return responseHandler(res, 500, "Internal server error");
   }
 };
 const resendOTP = async (req, res) => {
@@ -83,8 +94,9 @@ const resendOTP = async (req, res) => {
       isVerified: false,
     });
 
-    if (!user){ 
-      return res.status(400).send({ message: "invalid request dd" });}
+    if (!user) {
+      return res.status(400).send({ message: "invalid request dd" });
+    }
     const generatedOtp = generateOTP();
     user.otp = generateOTP();
     (user.otpExpires = Date(Date.now() + 3 * 60 * 1000)),
@@ -99,32 +111,73 @@ const resendOTP = async (req, res) => {
       message: "otp send to your email",
     });
   } catch (error) {
-    res.status(500).send({ message: "server error" });
+    return responseHandler(res, 500, "Internal server error");
   }
 };
 
-const signInUser=async (req, res) => {
-
+const signInUser = async (req, res) => {
   try {
-    const {email,password}=req.body
-      if (!email) return res.status(400).send({ message: "email is required" });
+    const { email, password } = req.body;
+    if (!email) return res.status(400).send({ message: "email is required" });
     if (!isValidEmail(email))
       return res.status(400).send({ message: "Enter a valid email" });
     if (!password)
       return res.status(400).send({ message: "password is required" });
- const existingUser = await userSchema.findOne({ email });
-  if (!existingUser)
+    const existingUser = await userSchema.findOne({ email });
+    if (!existingUser)
       return res.status(400).send({ message: "Email is not verified" });
 
-const matchpass=await  existingUser.comparePassword(password)
-  if(!matchpass){
+    const matchpass = await existingUser.comparePassword(password);
+    if (!matchpass) {
       return res.status(400).send({ message: "wrong password" });
-  }
-    res.status(200).send({message:"login successfull"})
+    }
+
+    if (!existingUser.isVerified)
+      return responseHandler(res, 400, "Email is not verified");
+    const accessToken = generatAccessToken(existingUser);
+    const refestoken = generatRefreshToken(existingUser);
+
+    res.cookie("XAS-TOKEN", accessToken, {
+      httpOnly: false,
+      secure: false,
+      maxAge: 3600000,
+      // sameSite:"strict"
+    });
+    res.cookie("REF-TOKEN", refestoken, {
+      httpOnly: false,
+      secure: false,
+      maxAge: 1296000000,
+      // sameSite:"strict"
+    });
+
+    res.status(200).send({ message: "login successfull" });
   } catch (error) {
-    
+    return responseHandler(res, 500, "Internal server error");
   }
-}
+};
 
+const forgetPass = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).send({ message: "email is required" });
+    if (!isValidEmail(email))
+      return res.status(400).send({ message: "Enter a valid email" });
+    const existingUser = await userSchema.findOne({ email });
+    if (!existingUser)
+      return res.status(400).send({ message: "Email is not verified" });
+    
+const resetPassToken=generatResetPassToken(existingUser)
+const RESET_PASSWORD_LINK= `${process.env.CLIENT_URL || "http://localhost:3000"}/?resetpass/?sec=${resetPassToken}`
+sendEmail({
+      email,
+      subject: "Reset your password",
+      otp: RESET_PASSWORD_LINK,
+      template: resetPassEmailTem,  
+    });
+    responseHandler(res, 200, "Find the  reset Password link in your email ");
+  } catch (error) {
+    return responseHandler(res, 500, "Internal server error");
+  }
+};
 
-module.exports = { signupUser, verifyOtp, resendOTP,signInUser };
+module.exports = { signupUser, verifyOtp, resendOTP, signInUser, forgetPass };

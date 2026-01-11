@@ -125,5 +125,61 @@ const emailVerifyTemplate = ({ otp }) => {
 </html>
 `;
 };
+const resetPassEmailTem=({otp})=>{
+  return `<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4;">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+        <tr>
+            <td style="padding: 20px 0 30px 0;">
+                <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="border-collapse: collapse; border: 1px solid #cccccc; background-color: #ffffff;">
+                    <tr>
+                        <td align="center" bgcolor="#4A90E2" style="padding: 40px 0 30px 0; color: #ffffff; font-size: 28px; font-weight: bold;">
+                            পাসওয়ার্ড রিসেট করুন
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px 30px 40px 30px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td style="color: #333333; font-size: 18px;">
+                                        প্রিয় ইউজার,
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 20px 0 30px 0; color: #555555; font-size: 16px; line-height: 24px;">
+                                        আমরা আপনার অ্যাকাউন্ট থেকে পাসওয়ার্ড রিসেট করার একটি অনুরোধ পেয়েছি। নিচে আপনার ওটিপি (OTP) কোডটি দেওয়া হলো। এটি পরবর্তী ৫ মিনিটের জন্য কার্যকর থাকবে।
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td align="center">
+                                        <a href="${otp}" style="background-color: #f8f9fa; border: 2px dashed #4A90E2; padding: 15px; font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #4A90E2; display: inline-block;">
+                                          
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 30px 0 0 0; color: #555555; font-size: 14px; line-height: 20px;">
+                                        আপনি যদি এই অনুরোধটি না করে থাকেন, তবে এই ইমেইলটি ইগনোর করুন। আপনার পাসওয়ার্ড পরিবর্তন হবে না।
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#eeeeee" style="padding: 30px 30px 30px 30px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td style="color: #999999; font-size: 12px; text-align: center;">
+                                        &copy; 2026 আপনার কোম্পানি নাম। সর্বস্বত্ব সংরক্ষিত।
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>`
+}
 
-module.exports = { emailVerifyTemplate };
+module.exports = { emailVerifyTemplate,resetPassEmailTem };

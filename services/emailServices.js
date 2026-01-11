@@ -17,7 +17,7 @@ const sendEmail=async({email,subject,otp,template})=>{
     from: '"Node_ecomers" <maddison53@ethereal.email>',
     to: email,
     subject:subject ,
-    html:   template({otp}) , 
+    html:   template({otp }) , 
   });
 }
 module.exports={sendEmail} 
