@@ -58,7 +58,7 @@ const signupUser = async (req, res) => {
   }
 };
 
-const verifyOtp = async (req, res) => {
+const verifyOtp = async (req, res) => { 
   try {
     const { otp, email } = req.body;
 
