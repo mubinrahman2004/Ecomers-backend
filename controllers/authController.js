@@ -71,7 +71,7 @@ const verifyOtp = async (req, res) => {
       otpExpires: { $gt: new Date() },
       isVerified: false,
     });
-
+ 
     if (!user) {
       return res.status(200).json({ Message: "invalid or experies opt" });
     }
