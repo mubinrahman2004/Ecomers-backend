@@ -56,7 +56,7 @@ const signupUser = async (req, res) => {
   } catch (error) {
     return responseHandler(res, 500, "Internal server error");
   }
-};
+};  
 
 const verifyOtp = async (req, res) => { 
   try {
