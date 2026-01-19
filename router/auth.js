@@ -1,5 +1,5 @@
   const express =require("express")
-const { signupUser, verifyOtp, resendOTP, signInUser, forgetPass } = require("../controllers/authController")
+const { signupUser, verifyOtp, resendOTP, signInUser, forgetPass, resetPassword } = require("../controllers/authController")
 
   const route =express.Router()
  
@@ -8,5 +8,6 @@ const { signupUser, verifyOtp, resendOTP, signInUser, forgetPass } = require("..
  route.post("/resendOTP",resendOTP)
  route.post("/signin" ,signInUser)
  route.post("/forgetpassword" ,forgetPass)
+ route.post("/resetpass/:token" ,resetPassword)
 
   module.exports=route   

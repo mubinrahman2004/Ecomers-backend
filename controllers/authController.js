@@ -9,6 +9,8 @@ const {
   generatAccessToken,
   generatRefreshToken,
   generatResetPassToken,
+  verifyResestToken,
+  hashResetToken,
 } = require("../services/helpers");
 const { responseHandler } = require("../services/responseHandler");
 const isValidEmail = require("../services/validation");
@@ -166,8 +168,11 @@ const forgetPass = async (req, res) => {
     if (!existingUser)
       return res.status(400).send({ message: "Email is not verified" });
     
-const resetPassToken=generatResetPassToken(existingUser)
-const RESET_PASSWORD_LINK= `${process.env.CLIENT_URL || "http://localhost:3000"}/?resetpass/?sec=${resetPassToken}`
+const {resetToken,hashedToken}=generatResetPassToken()
+existingUser.resetPassToken=hashedToken
+existingUser.resetExpire=Date.now() + 3 * 60 * 1000
+existingUser.save()
+const RESET_PASSWORD_LINK= `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/resetpass?sec=${resetToken}`
 sendEmail({
       email,
       subject: "Reset your password",
@@ -180,4 +185,31 @@ sendEmail({
   }
 };
 
-module.exports = { signupUser, verifyOtp, resendOTP, signInUser, forgetPass };
+const resetPassword =async(req,res)=>{
+try {
+  const {newPassword}=req.body
+const {token}=req.params
+if(!newPassword) return responseHandler(res,400,"new password is requred")
+if(!token) return responseHandler(res,404,"page not found")
+
+  const hashedToken = hashResetToken(token)
+  const existingUser=await userSchema.findOne({
+    resetPassToken:hashedToken,
+    resetExpire:{$gt:Date.now()}
+  })
+  if(!existingUser) return responseHandler(res,400,"Invelid Request")
+    existingUser.password=newPassword
+  existingUser.resetPassword="indifined"
+  existingUser.resetExpire=undefined
+  existingUser.save()
+  responseHandler(res,200,"password update successfully")
+} catch (error) {
+  return responseHandler(res, 500, "Internal server error");
+  
+}
+}
+
+module.exports = { signupUser, verifyOtp, resendOTP, signInUser, forgetPass
+  , resetPassword
+ };
+ 
