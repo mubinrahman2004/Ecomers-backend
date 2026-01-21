@@ -4,6 +4,7 @@ const {
   emailVerifyTemplate,
   resetPassEmailTem,
 } = require("../services/emailTemplate");
+
 const {
   generateOTP,
   generatAccessToken,
@@ -53,14 +54,14 @@ const signupUser = async (req, res) => {
       res,
       200,
       "Registration successfull,please verified your email",
-      true
+      true,
     );
   } catch (error) {
     return responseHandler(res, 500, "Internal server error");
   }
-};  
+};
 
-const verifyOtp = async (req, res) => { 
+const verifyOtp = async (req, res) => {
   try {
     const { otp, email } = req.body;
 
@@ -73,13 +74,14 @@ const verifyOtp = async (req, res) => {
       otpExpires: { $gt: new Date() },
       isVerified: false,
     });
- 
+
     if (!user) {
       return res.status(200).json({ Message: "invalid or experies opt" });
     }
 
     user.isVerified = true;
     user.otp = null;
+    user.otpExpires = null;
     user.save();
 
     res.status(200).send({ Message: "verifie successfull" });
@@ -101,13 +103,13 @@ const resendOTP = async (req, res) => {
     }
     const generatedOtp = generateOTP();
     user.otp = generateOTP();
-    (user.otpExpires = Date(Date.now() + 3 * 60 * 1000)),
+    ((user.otpExpires = Date(Date.now() + 3 * 60 * 1000)),
       sendEmail({
         email,
         subject: "email verification",
         otp: generatedOtp,
         template: emailVerifyTemplate,
-      });
+      }));
 
     res.status(201).send({
       message: "otp send to your email",
@@ -167,17 +169,17 @@ const forgetPass = async (req, res) => {
     const existingUser = await userSchema.findOne({ email });
     if (!existingUser)
       return res.status(400).send({ message: "Email is not verified" });
-    
-const {resetToken,hashedToken}=generatResetPassToken()
-existingUser.resetPassToken=hashedToken
-existingUser.resetExpire=Date.now() + 3 * 60 * 1000
-existingUser.save()
-const RESET_PASSWORD_LINK= `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/resetpass?sec=${resetToken}`
-sendEmail({
+
+    const { resetToken, hashedToken } = generatResetPassToken();
+    existingUser.resetPassToken = hashedToken;
+    existingUser.resetExpire = Date.now() + 3 * 60 * 1000;
+    existingUser.save();
+    const RESET_PASSWORD_LINK = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/resetpass?sec=${resetToken}`;
+    sendEmail({
       email,
       subject: "Reset your password",
       otp: RESET_PASSWORD_LINK,
-      template: resetPassEmailTem,  
+      template: resetPassEmailTem,
     });
     responseHandler(res, 200, "Find the  reset Password link in your email ");
   } catch (error) {
@@ -185,31 +187,70 @@ sendEmail({
   }
 };
 
-const resetPassword =async(req,res)=>{
-try {
-  const {newPassword}=req.body
-const {token}=req.params
-if(!newPassword) return responseHandler(res,400,"new password is requred")
-if(!token) return responseHandler(res,404,"page not found")
+const resetPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const { token } = req.params;
+    if (!newPassword)
+      return responseHandler(res, 400, "new password is requred");
+    if (!token) return responseHandler(res, 404, "page not found");
 
-  const hashedToken = hashResetToken(token)
-  const existingUser=await userSchema.findOne({
-    resetPassToken:hashedToken,
-    resetExpire:{$gt:Date.now()}
-  })
-  if(!existingUser) return responseHandler(res,400,"Invelid Request")
-    existingUser.password=newPassword
-  existingUser.resetPassword="indifined"
-  existingUser.resetExpire=undefined
-  existingUser.save()
-  responseHandler(res,200,"password update successfully")
-} catch (error) {
-  return responseHandler(res, 500, "Internal server error");
-  
-}
-}
+    const hashedToken = hashResetToken(token);
+    const existingUser = await userSchema.findOne({
+      resetPassToken: hashedToken,
+      resetExpire: { $gt: Date.now() },
+    });
+    if (!existingUser) return responseHandler(res, 400, "Invelid Request");
+    existingUser.password = newPassword;
+    existingUser.resetPassword = "indifined";
+    existingUser.resetExpire = undefined;
+    existingUser.save();
+    responseHandler(res, 200, "password update successfully");
+  } catch (error) {
+    return responseHandler(res, 500, "Internal server error");
+  }
+};
 
-module.exports = { signupUser, verifyOtp, resendOTP, signInUser, forgetPass
-  , resetPassword
- };
- 
+const getUserProfile = async (req, res) => {
+  try {
+    const userProfile = await userSchema
+      .findById(req.user._id)
+      .select("-password -otp  -otpExpires -resetPassToken ");
+    if (!userProfile) return responseHandler(res, 200, " ", true, userProfile);
+  } catch (error) {
+    return responseHandler(res, 500, "Invalid server error");
+  }
+};
+const updateUserProfile = async () => {
+  try {
+    const { avatar, fullName, phone, address } = req.body;
+    const userId = req.user._id;
+    const updateField = {};
+    return;
+
+    if (avatar) updateField.avatar = avatar;
+    if (fullName) updateField.fullName = fullName;
+    if (password) updateField.password = password;
+    if (address) updateField.address = address;
+
+    const user = await userSchema.findByIdAndUpdate(
+      userId,
+      updateField,
+      { avatar, fullName, phone, address },
+      { new: true },
+      select("-password -otp  -otpExpires -resetPassToken "),
+    );
+    responseHandler(res, 201, "", user);
+  } catch (error) {}
+};
+
+module.exports = {
+  signupUser,
+  verifyOtp,
+  resendOTP,
+  signInUser,
+  forgetPass,
+  getUserProfile,
+  resetPassword,
+  updateUserProfile,
+};

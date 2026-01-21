@@ -20,5 +20,5 @@ const authMeddleware = async (req, res, next) => {
     return responseHandler(res, 400, "invalid request");
   }
 };
-module.exports = {authMeddleware};
+module.exports = authMeddleware;
   

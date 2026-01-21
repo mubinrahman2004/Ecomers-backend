@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
+  avater:{
+type:String,
+  },
   fullName: {
     type: String,
     required: true,
