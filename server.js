@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser')
 
 const dbconfig = require('./dbConfig')
 const  route  = require('./router')
+const cloudinaryConfig = require('./services/cloudinaryConfig')
 
 
 app.use(express.json())
@@ -12,6 +13,7 @@ app.use(cookieParser())
 require("dotenv").config()
 app.use(cors())
 dbconfig()
+cloudinaryConfig()
 app.use(route)
 
  

@@ -14,4 +14,5 @@ const upload = multer()
  route.get("/Profile" ,authMeddleware, getUserProfile)
  route.put("/Profile" ,authMeddleware,upload.single('avatar'), updateUserProfile)
 
-  module.exports=route    
+ route.post("/refreshtoken",upload.single("avatar"),updateUserProfile)
+  module.exports=route     

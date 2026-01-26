@@ -1,9 +1,12 @@
+const { JsonWebTokenError } = require("jsonwebtoken");
 const userSchema = require("../models/userSchema");
+const uploadToCloudinary = require("../services/cloudinaryService");
 const { sendEmail } = require("../services/emailServices");
 const {
   emailVerifyTemplate,
   resetPassEmailTem,
 } = require("../services/emailTemplate");
+const cloudinary = require("cloudinary").v2;
 
 const {
   generateOTP,
@@ -12,6 +15,7 @@ const {
   generatResetPassToken,
   verifyResestToken,
   hashResetToken,
+  verifyToken,
 } = require("../services/helpers");
 const { responseHandler } = require("../services/responseHandler");
 const isValidEmail = require("../services/validation");
@@ -221,27 +225,48 @@ const getUserProfile = async (req, res) => {
     return responseHandler(res, 500, "Invalid server error");
   }
 };
-const updateUserProfile = async () => {
+const updateUserProfile = async (req, res) => {
   try {
     const { avatar, fullName, phone, address } = req.body;
     const userId = req.user._id;
     const updateField = {};
-    return;
 
-    if (avatar) updateField.avatar = avatar;
-    if (fullName) updateField.fullName = fullName;
-    if (password) updateField.password = password;
-    if (address) updateField.address = address;
+    const user = await userSchema
+      .findById(userId)
+      .select("-password -otp  -otpExpires -resetPassToken ");
+    if (avatar) {
+      const imgPublickId = user.avatar.split("/").pop().split(".")[0];
+      delateFromCloidinary(`avatar/${imgPublickId}`);
+      const imgRes = uploadToCloudinary(avatar, "avatar");
+      updateField.avater = imgRes.secure_url;
+    }
+    if (fullName) user.fullName = fullName;
+    if (password) user.password = password;
+    if (address) user.address = address;
+    user.save();
 
-    const user = await userSchema.findByIdAndUpdate(
-      userId,
-      updateField,
-      { avatar, fullName, phone, address },
-      { new: true },
-      select("-password -otp  -otpExpires -resetPassToken "),
-    );
     responseHandler(res, 201, "", user);
   } catch (error) {}
+};
+
+const refreshaccessToken = async () => {
+  try {
+    const refreshToken = req.cookie?.["REF-TOKEN"] || req.headers.authorization;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh token missing " });
+    }
+
+    const decoded = verifyToken(refreshToken);
+if(!decoded) return
+    const accessToken=generatAccessToken(decoded)
+    res.cookie("XAS-TOKEN", accessToken, {
+      httpOnly: false,
+      secure: false,
+      maxAge: 3600000,
+    }).send({success:true})
+  } catch (error) {
+    console.error("resfresh token error")
+  }
 };
 
 module.exports = {
