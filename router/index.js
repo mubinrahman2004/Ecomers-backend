@@ -3,6 +3,7 @@
 const authRouter=require("./auth")
 const productRouter=require("./product")
 route.use("/auth",authRouter);
+route.use("/catagory",require("./catagory"));
 // route.use("/product",productRouter);
 
 

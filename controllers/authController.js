@@ -217,9 +217,7 @@ const resetPassword = async (req, res) => {
 
 const getUserProfile = async (req, res) => {
   try {
-    const userProfile = await userSchema
-      .findById(req.user._id)
-      .select("-password -otp  -otpExpires -resetPassToken ");
+    const userProfile = await userSchema.findById(req.user._id).select("-password -otp  -otpExpires -resetPassToken ");
     if (!userProfile) return responseHandler(res, 200, " ", true, userProfile);
   } catch (error) {
     return responseHandler(res, 500, "Invalid server error");
@@ -257,15 +255,17 @@ const refreshaccessToken = async () => {
     }
 
     const decoded = verifyToken(refreshToken);
-if(!decoded) return
-    const accessToken=generatAccessToken(decoded)
-    res.cookie("XAS-TOKEN", accessToken, {
-      httpOnly: false,
-      secure: false,
-      maxAge: 3600000,
-    }).send({success:true})
+    if (!decoded) return;
+    const accessToken = generatAccessToken(decoded);
+    res
+      .cookie("XAS-TOKEN", accessToken, {
+        httpOnly: false,
+        secure: false,
+        maxAge: 3600000,
+      })
+      .send({ success: true });
   } catch (error) {
-    console.error("resfresh token error")
+    console.error("resfresh token error");
   }
 };
 
