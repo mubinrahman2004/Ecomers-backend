@@ -2,7 +2,10 @@
  const route =express.Router()
 const authRouter=require("./auth")
 const productRouter=require("./product")
+
 route.use("/auth",authRouter);
+route.use("/product",productRouter)
+
 route.use("/catagory",require("./catagory"));
 // route.use("/product",productRouter);
 
