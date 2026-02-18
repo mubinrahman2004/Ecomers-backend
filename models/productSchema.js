@@ -1,35 +1,41 @@
 const mongoose = require("mongoose");
 
-const productSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-  },
-  discription: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: mongoose.Types.ObjectId,
-    ref: "category",
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  discountPercentage: {
-    type: String,
-    default: 0,
-  },
-  variants: [
-    {
-      sku: {
-        type: String,
-        required: true,
-        unique: true,
-      },
-      attributes: {
+const productSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    discription: {
+      type: String,
+      required: true,
+    },
+    category: {
+      type: mongoose.Types.ObjectId,
+      ref: "category",
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+    },
+    discountPercentage: {
+      type: String,
+      default: 0,
+    },
+    variants: [
+      {
+        sku: {
+          type: String,
+          required: true,
+          unique: true,
+        },
+
         color: {
           type: String,
           required: true,
@@ -44,22 +50,25 @@ const productSchema = new mongoose.Schema({
           required: true,
         },
       },
-    },
-  ],
+    ],
 
-  tags: {
-    type: Array,
+    tags: [
+      {
+        type: String,
+      },
+    ],
+    thumbnail: {
+      type: String,
+      required: true,
+    },
+    image: {
+      type: [{ type: String }],
+    },
+    inActive: {
+      type: Boolean,
+      default: false,
+    },
   },
-  thumbnail: {
-    type: String,
-    required: true,
-  },
-  image: {
-    type: Array,
-  },
-  inActive:{
-    type:Boolean,
-    default:false
-  }
-},{timestamps:true});
+  { timestamps: true },
+);productSchema.index({slug:1})
 module.exports = mongoose.model("product", productSchema);

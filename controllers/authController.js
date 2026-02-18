@@ -76,17 +76,19 @@ const verifyOtp = async (req, res) => {
       email,
       otp: Number(otp),
       otpExpires: { $gt: new Date() },
-      isVerified: false,
+      isverified: false,
     });
 
     if (!user) {
       return res.status(200).json({ Message: "invalid or experies opt" });
     }
 
-    user.isVerified = true;
+    // user.isverified = true;
+    user.isverified = true;
     user.otp = null;
     user.otpExpires = null;
-    user.save();
+    // user.save();
+    await user.save();
 
     res.status(200).send({ Message: "verifie successfull" });
   } catch (error) {
@@ -126,22 +128,21 @@ const resendOTP = async (req, res) => {
 const signInUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email) return res.status(400).send({ message: "email is required" });
+    if (!email) return responseHandler(res, 400, "email is required");
+
     if (!isValidEmail(email))
-      return res.status(400).send({ message: "Enter a valid email" });
-    if (!password)
-      return res.status(400).send({ message: "password is required" });
+      return responseHandler(res, 400, "Enter a valid email");
+
+    if (!password) return responseHandler(res, 400, "password is required");
+
     const existingUser = await userSchema.findOne({ email });
-    if (!existingUser)
-      return res.status(400).send({ message: "Email is not verified" });
+    if (!existingUser) return responseHandler(res, 400, "User not found");
+
+    if (!existingUser.isverified)
+      return responseHandler(res, 400, "Email not verified");
 
     const matchpass = await existingUser.comparePassword(password);
-    if (!matchpass) {
-      return res.status(400).send({ message: "wrong password" });
-    }
-
-    if (!existingUser.isVerified)
-      return responseHandler(res, 400, "Email is not verified");
+    if (!matchpass) return responseHandler(res, 400, "Wrong password");
     const accessToken = generatAccessToken(existingUser);
     const refestoken = generatRefreshToken(existingUser);
 
@@ -158,7 +159,7 @@ const signInUser = async (req, res) => {
       // sameSite:"strict"
     });
 
-    res.status(200).send({ message: "login successfull" });
+    responseHandler(res, 200, "login successfull");
   } catch (error) {
     return responseHandler(res, 500, "Internal server error");
   }
@@ -217,7 +218,9 @@ const resetPassword = async (req, res) => {
 
 const getUserProfile = async (req, res) => {
   try {
-    const userProfile = await userSchema.findById(req.user._id).select("-password -otp  -otpExpires -resetPassToken ");
+    const userProfile = await userSchema
+      .findById(req.user._id)
+      .select("-password -otp  -otpExpires -resetPassToken ");
     if (!userProfile) return responseHandler(res, 200, " ", true, userProfile);
   } catch (error) {
     return responseHandler(res, 500, "Invalid server error");
@@ -278,4 +281,5 @@ module.exports = {
   getUserProfile,
   resetPassword,
   updateUserProfile,
+  refreshaccessToken,
 };
