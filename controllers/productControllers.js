@@ -3,7 +3,7 @@ const categorySchema = require("../models/categorySchema");
 const productSchema = require("../models/productSchema");
 const { uploadToCloudinary } = require("../services/cloudinaryService");
 const { responseHandler } = require("../services/responseHandler");
-const SIZE_ENUM = ["s", "m", "l", "xl", "2xl", "3xl"];
+const SIZE_ENUM = require("../services/utils");
 const creatProduct = async (req, res) => {
   try {
     const {
@@ -101,6 +101,11 @@ const getProductList = async (req, res) => {
 
     const pipeline = [
       {
+        $match: {
+          isActive: true,
+        },
+      },
+      {
         $lookup: {
           from: "products", // mongodb collection name
           localField: "_id",
@@ -143,11 +148,7 @@ const getProductList = async (req, res) => {
       },
     ];
     if (category) {
-      pipeline.push({
-        $match: {
-          "category.name": category,
-        },
-      });
+      pipeline.push({});
     }
 
     const productList = await productSchema.aggregate(pipeline);
@@ -168,7 +169,47 @@ const getProductList = async (req, res) => {
     console.log(error);
   }
 };
+
+const getProductDeatails = async (req, res) => {
+  try {
+    const slug = req.params;
+    const productdetails = await productSchema
+      .findOne({ slug, isActive: true })
+      .populate("category", "name")
+      .select("-isActive");
+    if (!getProductDeatails)
+      return responseHandler(res, 404, "product not found");
+
+    return responseHandler(res, 200, "", true, productdetails);
+  } catch (error) {
+    return responseHandler(res, 500, "Internal server error");
+  }
+};
+
+const updateProduct = async (req, res) => {
+  try {
+    const {
+      title,
+    
+      discription,
+      category,
+      price,
+      discountPercentage,
+      variants,
+      tags,
+      isActive
+    } = req.body;
+    const { slug } = req.params;
+
+
+    const productData= await productSchema.findOne({slug})
+
+  } catch (error) {}
+};
+
 module.exports = {
   creatProduct,
   getProductList,
+  getProductDeatails,
+  updateProduct
 };

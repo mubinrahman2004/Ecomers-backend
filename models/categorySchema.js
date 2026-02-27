@@ -7,6 +7,11 @@ const cetagorySchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  slug: {
+    type: String,
+    required: true,
+    default: "",
+  },
   thumbnail: {
     type: String,
     require: true,
@@ -14,9 +19,9 @@ const cetagorySchema = new mongoose.Schema({
   description: {
     type: String,
   },
-  isActive:{
-    type:Boolean,
-    default:true
-  }
-}); 
-module.exports = mongoose.model("catagory",cetagorySchema);
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+});
+module.exports = mongoose.model("catagory", cetagorySchema);

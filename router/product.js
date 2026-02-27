@@ -1,7 +1,7 @@
 const express = require("express");
 const authMeddleware = require("../meddlewer/authMedlewere");
 const roleCheckMiddleware = require("../meddlewer/roleCheckMiddleware");
-const { creatProduct, getProductList } = require("../controllers/productControllers");
+const { creatProduct, getProductList, getProductDeatails, updateProduct } = require("../controllers/productControllers");
 const multer = require("multer");
 const route = express.Router();
 const upload = multer();
@@ -17,4 +17,6 @@ route.post(
   creatProduct,
 );
 route.get("/allproduct ",getProductList)
+route.get("/:slug",getProductDeatails)
+route.put("/update",authMeddleware,  roleCheckMiddleware("admin"),updateProduct)
 module.exports = route;
