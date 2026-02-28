@@ -4,6 +4,7 @@ const productSchema = require("../models/productSchema");
 const { uploadToCloudinary } = require("../services/cloudinaryService");
 const { responseHandler } = require("../services/responseHandler");
 const SIZE_ENUM = require("../services/utils");
+const { json } = require("express");
 const creatProduct = async (req, res) => {
   try {
     const {
@@ -176,9 +177,9 @@ const getProductDeatails = async (req, res) => {
     const productdetails = await productSchema
       .findOne({ slug, isActive: true })
       .populate("category", "name")
-      .select("-isActive");
-    if (!getProductDeatails)
-      return responseHandler(res, 404, "product not found");
+      .select(" -updatedAt -_v");
+    if (!productdetails)
+      return responseHandler.error(res, 404, "product not found");
 
     return responseHandler(res, 200, "", true, productdetails);
   } catch (error) {
@@ -190,20 +191,74 @@ const updateProduct = async (req, res) => {
   try {
     const {
       title,
-    
+
       discription,
       category,
       price,
       discountPercentage,
       variants,
       tags,
-      isActive
+      isActive,
     } = req.body;
     const { slug } = req.params;
+    const thumbnail = req.files?.thumbnail;
+    const images = req.files?.images;
+    const productData = await productSchema.findOne({ slug });
 
+    if (title) productData.title = title;
+    if (discription) productData.discription = discription;
+    if (category) productData.category = category;
+    if (discountPercentage) productData.discountPercentage = discountPercentage;
 
-    const productData= await productSchema.findOne({slug})
+    if (price) productData.price = price;
+    if (tags && tags?.length > 0 && Array.isArray(tags)) productData.tags = tags;
+    if (isActive) productData.isActive = isActive === "true";
 
+    if (!Array.isArray(variantsData) && variantsData.length === 0) {
+      const variantsData = JSON.parse(variants);
+      for (const variant of variantsData) {
+        if (!variant.sku)
+          return responseHandler.error(res, 400, "sku is required");
+        if (!variant.color)
+          return responseHandler.error(res, 400, "color is required");
+        if (!variant.size)
+          return responseHandler.error(res, 400, "size is required");
+        if (!SIZE_ENUM.includes(variants.size))
+          return responseHandler(res, 400, "invalid size");
+        if (!variant.stock || variant.stock < 1)
+          return responseHandler.error(
+            res,
+            400,
+            "stock is required and must be more than 0",
+          );
+      }
+      const skus = variantsData.map((v) => v.sku);
+      if (new Set(skus).size !== skus.length)
+        return responseHandler.error(res, 400, "sku must unique");
+      productData.variants = variantsData;
+    }
+    if (thumbnail) {
+      const imgPublickId = productData.thumbnail.split("/").pop().split(".")[0];
+      delateFromCloidinary(`products/${imgPublickId}`);
+      const imgRes = uploadToCloudinary(thumbnail, "products");
+      productData.thumbnail = imgRes.secure_url;
+    }
+    //  if (images) {
+    //   const resPromis = images.map(async (item) => {
+    //     return uploadToCloudinary(item, "product");
+    //   });
+    //   const results = await Promise.all(resPromis);
+    //   imagesUrl = results.map((r) => r.secure_url);
+    // }
+
+    productData.save();
+
+    return responseHandler.success(
+      res,
+      200,
+      productData,
+      "product updated successfully",
+    );
   } catch (error) {}
 };
 
@@ -211,5 +266,5 @@ module.exports = {
   creatProduct,
   getProductList,
   getProductDeatails,
-  updateProduct
+  updateProduct,
 };

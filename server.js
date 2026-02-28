@@ -7,8 +7,9 @@ const dbconfig = require('./dbConfig')
 const  route  = require('./router')
 const cloudinaryConfig = require('./services/cloudinaryConfig')
 
-
+app.use(express.urlencoded({extended:true}))
 app.use(express.json())
+
 app.use(cookieParser())
 require("dotenv").config()
 app.use(cors())

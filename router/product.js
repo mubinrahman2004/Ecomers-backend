@@ -18,5 +18,8 @@ route.post(
 );
 route.get("/allproduct ",getProductList)
 route.get("/:slug",getProductDeatails)
-route.put("/update",authMeddleware,  roleCheckMiddleware("admin"),updateProduct)
+route.put("/update",authMeddleware,  roleCheckMiddleware("admin"),  upload.fields([
+    { name: "thumbnail", maxCount: 1 },
+    { name: "image", maxCount: 4 },
+  ]),updateProduct)
 module.exports = route;
