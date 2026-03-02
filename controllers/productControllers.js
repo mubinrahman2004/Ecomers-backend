@@ -243,13 +243,7 @@ const updateProduct = async (req, res) => {
       const imgRes = uploadToCloudinary(thumbnail, "products");
       productData.thumbnail = imgRes.secure_url;
     }
-    //  if (images) {
-    //   const resPromis = images.map(async (item) => {
-    //     return uploadToCloudinary(item, "product");
-    //   });
-    //   const results = await Promise.all(resPromis);
-    //   imagesUrl = results.map((r) => r.secure_url);
-    // }
+ 
 
     productData.save();
 
