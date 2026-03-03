@@ -1,7 +1,10 @@
 const { pipeline } = require("nodemailer/lib/xoauth2");
 const categorySchema = require("../models/categorySchema");
 const productSchema = require("../models/productSchema");
-const { uploadToCloudinary } = require("../services/cloudinaryService");
+const {
+  uploadToCloudinary,
+  delateFromCloidinary,
+} = require("../services/cloudinaryService");
 const { responseHandler } = require("../services/responseHandler");
 const SIZE_ENUM = require("../services/utils");
 const { json } = require("express");
@@ -199,6 +202,7 @@ const updateProduct = async (req, res) => {
       variants,
       tags,
       isActive,
+      destroyImages,
     } = req.body;
     const { slug } = req.params;
     const thumbnail = req.files?.thumbnail;
@@ -211,11 +215,12 @@ const updateProduct = async (req, res) => {
     if (discountPercentage) productData.discountPercentage = discountPercentage;
 
     if (price) productData.price = price;
-    if (tags && tags?.length > 0 && Array.isArray(tags)) productData.tags = tags;
+    if (tags && tags?.length > 0 && Array.isArray(tags))
+      productData.tags = tags;
     if (isActive) productData.isActive = isActive === "true";
 
+    const variantsData =variants && JSON.parse(variants);
     if (!Array.isArray(variantsData) && variantsData.length === 0) {
-      const variantsData = JSON.parse(variants);
       for (const variant of variantsData) {
         if (!variant.sku)
           return responseHandler.error(res, 400, "sku is required");
@@ -243,7 +248,33 @@ const updateProduct = async (req, res) => {
       const imgRes = uploadToCloudinary(thumbnail, "products");
       productData.thumbnail = imgRes.secure_url;
     }
- 
+ let imagesUrl =[];   
+let totalImages=productData.images.length
+if(destroyImages.length >0 ) totalImages -= destroyImages.length
+if(Array.isArray(images) && images.length > 0 )totalImages += images.length
+if(totalImages > 4 ) return  responseHandler.error(res,400,"you can upload miximum 4 images")
+if(totalImages < 1 ) return  responseHandler.error(res,400,"minimum 1 images should be stay")
+    if (images) {
+
+      const resPromis = images.map(async (item) =>
+        uploadToCloudinary(item, "product"),
+      );
+      const results = await Promise.all(resPromis);
+      imagesUrl = results.map((r) => r.secure_url);
+    }
+  
+    if (Array.isArray(destroyImages) && destroyImages.length > 0) {
+      for (const url of destroyImages) {
+        const imgPublickId = url.split("/").pop().split(".")[0];
+
+        delateFromCloidinary(`products/${imgPublickId}`);
+      }
+       let filteredImage= productData.images.filter((item)=>{
+        return !destroyImages.includes(item)
+       })
+   allImagesUrl.concat(filteredImage)
+    }
+ if( imagesUrl.length > 0 )productData.images=imagesUrl 
 
     productData.save();
 
