@@ -286,7 +286,7 @@ if(totalImages < 1 ) return  responseHandler.error(res,400,"minimum 1 images sho
     );
   } catch (error) {}
 };
-
+    
 module.exports = {
   creatProduct,
   getProductList,
