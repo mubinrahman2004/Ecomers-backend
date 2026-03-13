@@ -63,9 +63,6 @@ const cartSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-cartSchema.pre("save",function(){
-    this.totalItems=this.items.reduce((acc,item)=>acc + item.quantity,0)
-    this.totalPrice=this.items.reduce((acc,item)=>acc + item.subtotal,0)
-})
+
 
 module.exports = mongoose.model("Cart", cartSchema);
