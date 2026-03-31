@@ -28,13 +28,11 @@ const paymentSchema = new mongoose.Schema(
  
   method: {
     type: String,
-    enum: ["COD", "Bkash", "Nagad", "Card", "Stripe", "cash"],
+    enum: ["SSLCommers", "Bkash", "Nagad", "Card", "Stripe", "cash"],
     required: true
   },
 
-  PaymentId: {
-    type: String
-  },
+  PaymentId:  String,
 
 status: {
     type: String,
@@ -60,7 +58,7 @@ const orderSchema = new mongoose.Schema(
     items: [orderItems],
 
     shippingAddress: {
-      type: string,
+      type: String,
       required: true,
     },
     insideDhaka: {
@@ -83,7 +81,7 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
     },
     orderNumber:{
-        type:string,
+        type:String,
         unique:true
     },
     delivaredAt:Date,
@@ -92,4 +90,4 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = mongoose.model("Order", cartSchema);
+module.exports = mongoose.model("Order", orderSchema,);

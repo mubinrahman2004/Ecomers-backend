@@ -3,13 +3,14 @@
 const authRouter=require("./auth")
 const productRouter=require("./product");
 const authMeddleware = require("../meddlewer/authMedlewere");
+const order=require ("./order")
 
 route.use("/auth",authRouter);
 route.use("/product",productRouter)
 
 route.use("/catagory",require("./catagory"));
 route.use("/cart",authMeddleware, require("./cart"));
-
+route.use(authMeddleware,order)
 
 
 route.get("/",(req,res)=>{
