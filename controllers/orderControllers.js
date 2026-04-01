@@ -1,14 +1,15 @@
 const OrderSchma = require("../models/OrderSchma");
 const { responseHandler } = require("../services/responseHandler");
+const stripe = require("stripe")(`${process.env.STRIPE_SEC_KEY}`);
 
 const checkout = async (req, res) => {
   const { paymentType, cartId, shippingAddress, insideDhaka } = req.body;
   const orderNumber = `TRX-${Date.now()}`;
 
-  if(!paymentType|| !cartId || !shippingAddress || !insideDhaka){
-    responseHandler.error(res,400,"all field are requre")
+  if (!paymentType || !cartId || !shippingAddress || !insideDhaka) {
+    responseHandler.error(res, 400, "all field are requre");
   }
-   
+
   try {
     if (!cartId) return responseHandler.error(res, 400, "invalid request");
     const cartData = await categorySchema.findOne({ _id: cartId });
@@ -31,11 +32,31 @@ const checkout = async (req, res) => {
       },
       orderNumber,
     });
-    orderData.save()
-if(paymentType==="cash"){
-return responseHandler.success(res,200,"order place successfully")
-}
+    orderData.save();
 
+    if (paymentType === "cash") {
+      return responseHandler.success(res, 200, "order place successfully");
+    }
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "inr",
+            product_data: {
+              name: "T-Shirt",
+              description: `Blue T-Shirt with chest print`,
+            },
+            unit_amount: 500 * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      customer_email: `${req.user.email}`,
+      success_url: `https://example.com/success`,
+      cancel_url: `https://example.com/error`,
+    });
   } catch (error) {}
 };
+
 module.exports = checkout;

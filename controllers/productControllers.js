@@ -99,9 +99,10 @@ const getProductList = async (req, res) => {
 
     const limit = parseInt(req.query.limit) || 10; // Items per page, default 10
     const category = req.query.category;
-    const skip = (page - 1) * limit; // Number of documents to skip
 
-    const totalProducts = await Product.countDocuments();
+    const skip = (page - 1) * limit; // Number of documents to skip
+    const search = req.query.search;
+    const totalProducts = await productSchema.countDocuments();
 
     const pipeline = [
       {
@@ -152,7 +153,21 @@ const getProductList = async (req, res) => {
       },
     ];
     if (category) {
-      pipeline.push({});
+      pipeline.push({
+        $match: {
+          "category.slug": category,
+        },
+      });
+    }
+    if (search) {
+      pipeline.push({
+        $match: {
+          title: {
+            $regex: search,
+            $options: "i", // 'i' for case-insensitive
+          },
+        },
+      });
     }
 
     const productList = await productSchema.aggregate(pipeline);
@@ -219,7 +234,7 @@ const updateProduct = async (req, res) => {
       productData.tags = tags;
     if (isActive) productData.isActive = isActive === "true";
 
-    const variantsData =variants && JSON.parse(variants);
+    const variantsData = variants && JSON.parse(variants);
     if (!Array.isArray(variantsData) && variantsData.length === 0) {
       for (const variant of variantsData) {
         if (!variant.sku)
@@ -248,33 +263,35 @@ const updateProduct = async (req, res) => {
       const imgRes = uploadToCloudinary(thumbnail, "products");
       productData.thumbnail = imgRes.secure_url;
     }
- let imagesUrl =[];   
-let totalImages=productData.images.length
-if(destroyImages.length >0 ) totalImages -= destroyImages.length
-if(Array.isArray(images) && images.length > 0 )totalImages += images.length
-if(totalImages > 4 ) return  responseHandler.error(res,400,"you can upload miximum 4 images")
-if(totalImages < 1 ) return  responseHandler.error(res,400,"minimum 1 images should be stay")
+    let imagesUrl = [];
+    let totalImages = productData.images.length;
+    if (destroyImages.length > 0) totalImages -= destroyImages.length;
+    if (Array.isArray(images) && images.length > 0)
+      totalImages += images.length;
+    if (totalImages > 4)
+      return responseHandler.error(res, 400, "you can upload miximum 4 images");
+    if (totalImages < 1)
+      return responseHandler.error(res, 400, "minimum 1 images should be stay");
     if (images) {
-
       const resPromis = images.map(async (item) =>
         uploadToCloudinary(item, "product"),
       );
       const results = await Promise.all(resPromis);
       imagesUrl = results.map((r) => r.secure_url);
     }
-  
+
     if (Array.isArray(destroyImages) && destroyImages.length > 0) {
       for (const url of destroyImages) {
         const imgPublickId = url.split("/").pop().split(".")[0];
 
         delateFromCloidinary(`products/${imgPublickId}`);
       }
-       let filteredImage= productData.images.filter((item)=>{
-        return !destroyImages.includes(item)
-       })
-   allImagesUrl.concat(filteredImage)
+      let filteredImage = productData.images.filter((item) => {
+        return !destroyImages.includes(item);
+      });
+      allImagesUrl.concat(filteredImage);
     }
- if( imagesUrl.length > 0 )productData.images=imagesUrl 
+    if (imagesUrl.length > 0) productData.images = imagesUrl;
 
     productData.save();
 
@@ -286,7 +303,7 @@ if(totalImages < 1 ) return  responseHandler.error(res,400,"minimum 1 images sho
     );
   } catch (error) {}
 };
-    
+
 module.exports = {
   creatProduct,
   getProductList,
