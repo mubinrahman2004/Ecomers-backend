@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser')
 const dbconfig = require('./dbConfig')
 const  route  = require('./router')
 const cloudinaryConfig = require('./services/cloudinaryConfig')
+const { webhook } = require('./controllers/orderControllers')
 
 app.use(express.urlencoded({extended:true}))
 app.use(express.json())
@@ -17,7 +18,8 @@ dbconfig()
 cloudinaryConfig()
 app.use(route)
 
- 
+ app.post('/webhook', express.raw({type: 'application/json'}), webhook);
+
   
 app.listen(8000, () => {
   console.log("server is running")

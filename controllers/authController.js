@@ -1,4 +1,3 @@
-const { JsonWebTokenError } = require("jsonwebtoken");
 const userSchema = require("../models/userSchema");
 const uploadToCloudinary = require("../services/cloudinaryService");
 const { sendEmail } = require("../services/emailServices");
@@ -6,34 +5,37 @@ const {
   emailVerifyTemplate,
   resetPassEmailTem,
 } = require("../services/emailTemplate");
-const cloudinary = require("cloudinary").v2;
 
 const {
   generateOTP,
   generatAccessToken,
   generatRefreshToken,
   generatResetPassToken,
-  verifyResestToken,
   hashResetToken,
   verifyToken,
 } = require("../services/helpers");
+
 const { responseHandler } = require("../services/responseHandler");
 const isValidEmail = require("../services/validation");
 
+
+// ================= SIGNUP =================
 const signupUser = async (req, res) => {
   try {
-    const { fullName, email, password, phone, address, distric, role } =
-      req.body;
+    const { fullName, email, password, phone, address } = req.body;
 
-    if (!email) return res.status(400).send({ message: "email is required" });
+    if (!email) return responseHandler.error(res, 400, "email is required");
+
     if (!isValidEmail(email))
-      return res.status(400).send({ message: "Enter a valid email" });
+      return responseHandler.error(res, 400, "Enter a valid email");
+
     if (!password)
-      return res.status(400).send({ message: "password is required" });
+      return responseHandler.error(res, 400, "password is required");
 
     const existingUser = await userSchema.findOne({ email });
+
     if (existingUser)
-      return res.status(400).send({ message: "user already this email" });
+      return responseHandler.error(res, 400, "User already exists");
 
     const generatedOtp = generateOTP();
 
@@ -44,33 +46,37 @@ const signupUser = async (req, res) => {
       phone,
       address,
       otp: generatedOtp,
-      otpExpires: Date(Date.now() + 3 * 60 * 1000),
+      otpExpires: Date.now() + 3 * 60 * 1000,
     });
-    sendEmail({
+
+    await user.save();
+
+    await sendEmail({
       email,
-      subject: "email verification",
+      subject: "Email Verification",
       otp: generatedOtp,
       template: emailVerifyTemplate,
     });
 
-    user.save();
-    return responseHandler(
+    return responseHandler.success(
       res,
       200,
-      "Registration successfull,please verified your email",
-      true,
+      null,
+      "Registration successful, verify your email"
     );
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
 
+
+// ================= VERIFY OTP =================
 const verifyOtp = async (req, res) => {
   try {
     const { otp, email } = req.body;
 
-    if (!otp) return res.status(400).send({ message: "otp is requred" });
-    if (!email) return res.status(400).send({ message: "invalid request" });
+    if (!otp) return responseHandler.error(res, 400, "OTP is required");
+    if (!email) return responseHandler.error(res, 400, "Invalid request");
 
     const user = await userSchema.findOne({
       email,
@@ -79,198 +85,241 @@ const verifyOtp = async (req, res) => {
       isverified: false,
     });
 
-    if (!user) {
-      return res.status(200).json({ Message: "invalid or experies opt" });
-    }
+    if (!user)
+      return responseHandler.error(res, 400, "Invalid or expired OTP");
 
-    // user.isverified = true;
     user.isverified = true;
     user.otp = null;
     user.otpExpires = null;
-    // user.save();
+
     await user.save();
 
-    res.status(200).send({ Message: "verifie successfull" });
+    return responseHandler.success(res, 200, null, "Verification successful");
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
+
+
+// ================= RESEND OTP =================
 const resendOTP = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).send({ message: "invalid request" });
+
+    if (!email) return responseHandler.error(res, 400, "Email required");
+
     const user = await userSchema.findOne({
       email,
-      isVerified: false,
+      isverified: false,
     });
 
-    if (!user) {
-      return res.status(400).send({ message: "invalid request dd" });
-    }
+    if (!user)
+      return responseHandler.error(res, 400, "Invalid request");
+
     const generatedOtp = generateOTP();
-    user.otp = generateOTP();
-    ((user.otpExpires = Date(Date.now() + 3 * 60 * 1000)),
-      sendEmail({
-        email,
-        subject: "email verification",
-        otp: generatedOtp,
-        template: emailVerifyTemplate,
-      }));
 
-    res.status(201).send({
-      message: "otp send to your email",
+    user.otp = generatedOtp;
+    user.otpExpires = Date.now() + 3 * 60 * 1000;
+
+    await user.save();
+
+    await sendEmail({
+      email,
+      subject: "Email Verification",
+      otp: generatedOtp,
+      template: emailVerifyTemplate,
     });
+
+    return responseHandler.success(res, 200, null, "OTP sent");
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
 
+
+// ================= SIGN IN =================
 const signInUser = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email) return responseHandler(res, 400, "email is required");
+
+    if (!email) return responseHandler.error(res, 400, "email required");
 
     if (!isValidEmail(email))
-      return responseHandler(res, 400, "Enter a valid email");
+      return responseHandler.error(res, 400, "Invalid email");
 
-    if (!password) return responseHandler(res, 400, "password is required");
+    if (!password)
+      return responseHandler.error(res, 400, "password required");
 
-    const existingUser = await userSchema.findOne({ email });
-    if (!existingUser) return responseHandler(res, 400, "User not found");
+    const user = await userSchema.findOne({ email });
 
-    if (!existingUser.isverified)
-      return responseHandler(res, 400, "Email not verified");
+    if (!user)
+      return responseHandler.error(res, 400, "User not found");
 
-    const matchpass = await existingUser.comparePassword(password);
-    if (!matchpass) return responseHandler(res, 400, "Wrong password");
-    const accessToken = generatAccessToken(existingUser);
-    const refestoken = generatRefreshToken(existingUser);
+    if (!user.isverified)
+      return responseHandler.error(res, 400, "Email not verified");
+
+    const match = await user.comparePassword(password);
+
+    if (!match)
+      return responseHandler.error(res, 400, "Wrong password");
+
+    const accessToken = generatAccessToken(user);
+    const refreshToken = generatRefreshToken(user);
 
     res.cookie("XAS-TOKEN", accessToken, {
       httpOnly: false,
       secure: false,
       maxAge: 3600000,
-      // sameSite:"strict"
     });
-    res.cookie("REF-TOKEN", refestoken, {
+
+    res.cookie("REF-TOKEN", refreshToken, {
       httpOnly: false,
       secure: false,
       maxAge: 1296000000,
-      // sameSite:"strict"
     });
 
-    responseHandler(res, 200, "login successfull");
+    return responseHandler.success(res, 200, null, "Login successful");
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
 
+
+// ================= FORGET PASSWORD =================
 const forgetPass = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).send({ message: "email is required" });
-    if (!isValidEmail(email))
-      return res.status(400).send({ message: "Enter a valid email" });
-    const existingUser = await userSchema.findOne({ email });
-    if (!existingUser)
-      return res.status(400).send({ message: "Email is not verified" });
+
+    if (!email) return responseHandler.error(res, 400, "Email required");
+
+    const user = await userSchema.findOne({ email });
+
+    if (!user)
+      return responseHandler.error(res, 400, "User not found");
 
     const { resetToken, hashedToken } = generatResetPassToken();
-    existingUser.resetPassToken = hashedToken;
-    existingUser.resetExpire = Date.now() + 3 * 60 * 1000;
-    existingUser.save();
-    const RESET_PASSWORD_LINK = `${process.env.CLIENT_URL || "http://localhost:3000"}/auth/resetpass?sec=${resetToken}`;
-    sendEmail({
+
+    user.resetPassToken = hashedToken;
+    user.resetExpire = Date.now() + 3 * 60 * 1000;
+
+    await user.save();
+
+    const link = `http://localhost:3000/auth/resetpass?sec=${resetToken}`;
+
+    await sendEmail({
       email,
-      subject: "Reset your password",
-      otp: RESET_PASSWORD_LINK,
+      subject: "Reset Password",
+      otp: link,
       template: resetPassEmailTem,
     });
-    responseHandler(res, 200, "Find the  reset Password link in your email ");
+
+    return responseHandler.success(res, 200, null, "Reset link sent");
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
 
+
+// ================= RESET PASSWORD =================
 const resetPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
     const { token } = req.params;
+
     if (!newPassword)
-      return responseHandler(res, 400, "new password is requred");
-    if (!token) return responseHandler(res, 404, "page not found");
+      return responseHandler.error(res, 400, "New password required");
 
     const hashedToken = hashResetToken(token);
-    const existingUser = await userSchema.findOne({
+
+    const user = await userSchema.findOne({
       resetPassToken: hashedToken,
       resetExpire: { $gt: Date.now() },
     });
-    if (!existingUser) return responseHandler(res, 400, "Invelid Request");
-    existingUser.password = newPassword;
-    existingUser.resetPassword = "indifined";
-    existingUser.resetExpire = undefined;
-    existingUser.save();
-    responseHandler(res, 200, "password update successfully");
+
+    if (!user)
+      return responseHandler.error(res, 400, "Invalid request");
+
+    user.password = newPassword;
+    user.resetPassToken = undefined;
+    user.resetExpire = undefined;
+
+    await user.save();
+
+    return responseHandler.success(res, 200, null, "Password updated");
   } catch (error) {
-    return responseHandler(res, 500, "Internal server error");
+    return responseHandler.error(res, 500);
   }
 };
 
+
+// ================= PROFILE =================
 const getUserProfile = async (req, res) => {
   try {
-    const userProfile = await userSchema
+    const user = await userSchema
       .findById(req.user._id)
-      .select("-password -otp  -otpExpires -resetPassToken ");
-    if (!userProfile) return responseHandler(res, 200, " ", true, userProfile);
+      .select("-password -otp -otpExpires -resetPassToken");
+
+    if (!user)
+      return responseHandler.error(res, 404, "User not found");
+
+    return responseHandler.success(res, 200, user, "User profile");
   } catch (error) {
-    return responseHandler(res, 500, "Invalid server error");
+    return responseHandler.error(res, 500);
   }
 };
+
+
+// ================= UPDATE PROFILE =================
 const updateUserProfile = async (req, res) => {
   try {
-    const { avatar, fullName, phone, address } = req.body;
-    const userId = req.user._id;
-    const updateField = {};
+    const { fullName, phone, address } = req.body;
 
-    const user = await userSchema
-      .findById(userId)
-      .select("-password -otp  -otpExpires -resetPassToken ");
-    if (avatar) {
-      const imgPublickId = user.avatar.split("/").pop().split(".")[0];
-      delateFromCloidinary(`avatar/${imgPublickId}`);
-      const imgRes = uploadToCloudinary(avatar, "avatar");
-      updateField.avater = imgRes.secure_url;
-    }
+    const user = await userSchema.findById(req.user._id);
+
+    if (!user)
+      return responseHandler.error(res, 404, "User not found");
+
     if (fullName) user.fullName = fullName;
-    if (password) user.password = password;
+    if (phone) user.phone = phone;
     if (address) user.address = address;
-    user.save();
 
-    responseHandler(res, 201, "", user);
-  } catch (error) {}
-};
+    await user.save();
 
-const refreshaccessToken = async () => {
-  try {
-    const refreshToken = req.cookie?.["REF-TOKEN"] || req.headers.authorization;
-    if (!refreshToken) {
-      return res.status(401).json({ message: "Refresh token missing " });
-    }
-
-    const decoded = verifyToken(refreshToken);
-    if (!decoded) return;
-    const accessToken = generatAccessToken(decoded);
-    res
-      .cookie("XAS-TOKEN", accessToken, {
-        httpOnly: false,
-        secure: false,
-        maxAge: 3600000,
-      })
-      .send({ success: true });
+    return responseHandler.success(res, 200, user, "Profile updated");
   } catch (error) {
-    console.error("resfresh token error");
+    return responseHandler.error(res, 500);
   }
 };
+
+
+// ================= REFRESH TOKEN =================
+const refreshaccessToken = async (req, res) => {
+  try {
+    const refreshToken =
+      req.cookies?.["REF-TOKEN"] || req.headers.authorization;
+
+    if (!refreshToken)
+      return responseHandler.error(res, 401, "Token missing");
+
+    const decoded = verifyToken(refreshToken);
+
+    if (!decoded)
+      return responseHandler.error(res, 401, "Invalid token");
+
+    const accessToken = generatAccessToken(decoded);
+
+    res.cookie("XAS-TOKEN", accessToken, {
+      httpOnly: false,
+      secure: false,
+      maxAge: 3600000,
+    });
+
+    return responseHandler.success(res, 200, null, "Token refreshed");
+  } catch (error) {
+    return responseHandler.error(res, 500);
+  }
+};
+
 
 module.exports = {
   signupUser,
@@ -278,8 +327,8 @@ module.exports = {
   resendOTP,
   signInUser,
   forgetPass,
-  getUserProfile,
   resetPassword,
+  getUserProfile,
   updateUserProfile,
   refreshaccessToken,
 };
