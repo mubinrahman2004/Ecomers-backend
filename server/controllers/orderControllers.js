@@ -43,12 +43,12 @@ const checkout = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "inr",
+            currency: "BDT",
             product_data: {
               name: "T-Shirt",
               description: `Blue T-Shirt with chest print`,
             },
-            unit_amount: 500 * 100,
+            unit_amount: 700 * 100,
           },
           quantity: 1,
         },
@@ -60,8 +60,13 @@ const checkout = async (req, res) => {
       },
       success_url: `${process.env.CLIENT_URL}success`,
       cancel_url: `${process.env.CLIENT_URL}error`,
+    
     });
-  } catch (error) {}
+    res.redirect(303,session.url)
+  } catch (error) {
+    console.log(error);
+    
+  }
 };
 
 const webhook = async (req, res) => {
